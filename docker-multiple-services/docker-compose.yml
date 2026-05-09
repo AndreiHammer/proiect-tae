@@ -1,0 +1,114 @@
+services:
+
+  kafka1:
+    image: apache/kafka:latest
+    container_name: kafka1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_CLUSTER_ID: "xslt-kafka-cluster-01"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka1:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+
+  kafka2:
+    image: apache/kafka:latest
+    container_name: kafka2
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_CLUSTER_ID: "xslt-kafka-cluster-01"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9094,INTERNAL://kafka2:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9094"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+
+
+  akhq:
+    image: tchiotludo/akhq:latest
+    container_name: akhq
+    ports:
+      - "8090:8080"
+    depends_on:
+      kafka1:
+        condition: service_started
+      kafka2:
+        condition: service_started
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            xslt-kafka-cluster:
+              properties:
+                bootstrap.servers: "kafka1:29092,kafka2:29092"
+
+  invoice-producer:
+    image: andreihammer/proiect-tae:latest
+    container_name: invoice-producer
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: invoice-producer
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
+    depends_on:
+      kafka1:
+        condition: service_started
+      kafka2:
+        condition: service_started
+
+  invoice-consumer:
+    image: andreihammer/proiect-tae:latest
+    container_name: invoice-consumer
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: invoice-consumer
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
+    depends_on:
+      kafka1:
+        condition: service_started
+      kafka2:
+        condition: service_started
+
+  payment-consumer:
+    image: andreihammer/proiect-tae:latest
+    container_name: payment-consumer
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: payment-consumer
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
+    depends_on:
+      kafka1:
+        condition: service_started
+      kafka2:
+        condition: service_started

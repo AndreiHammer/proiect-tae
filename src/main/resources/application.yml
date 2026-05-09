@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: proiect-tae
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092},${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+
+logging:
+  level:
+    org.apache.kafka: ERROR
+    org.springframework.kafka: ERROR

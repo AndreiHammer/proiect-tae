@@ -1,0 +1,13 @@
+package com.hammer.proiecttae;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class TaeApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
