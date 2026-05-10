@@ -72,14 +72,6 @@ services:
               properties:
                 bootstrap.servers: "kafka1:29092,kafka2:29092"
 
-  # ── App instances (one per logical role) ──────────────────────────────────
-  #
-  # All four share the same image; the active Spring profile selects which
-  # beans are loaded. SPRING_KAFKA_BOOTSTRAP_SERVERS points to both brokers
-  # so the Kafka client can fail over automatically if one goes down.
-  #
-  # Trigger the workflow: curl http://localhost:8081/api/workflow/start
-
   invoice-ingest:
     image: andreihammer/proiect-tae:latest
     container_name: invoice-ingest
