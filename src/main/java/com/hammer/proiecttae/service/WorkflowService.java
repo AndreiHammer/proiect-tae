@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Profile("invoice-producer")
+@Profile("invoice-ingest")
 public class WorkflowService {
 
     private final InvoiceProducerService invoiceProducerService;

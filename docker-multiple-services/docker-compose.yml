@@ -21,10 +21,11 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 2
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
       interval: 15s
       timeout: 10s
       retries: 15
+      start_period: 30s
 
   kafka2:
     image: apache/kafka:latest
@@ -47,11 +48,11 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 2
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9094"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9094"]
       interval: 15s
       timeout: 10s
       retries: 15
-
+      start_period: 30s
 
   akhq:
     image: tchiotludo/akhq:latest
@@ -60,9 +61,9 @@ services:
       - "8090:8080"
     depends_on:
       kafka1:
-        condition: service_started
+        condition: service_healthy
       kafka2:
-        condition: service_started
+        condition: service_healthy
     environment:
       AKHQ_CONFIGURATION: |
         akhq:
@@ -71,44 +72,66 @@ services:
               properties:
                 bootstrap.servers: "kafka1:29092,kafka2:29092"
 
-  invoice-producer:
+  # ── App instances (one per logical role) ──────────────────────────────────
+  #
+  # All four share the same image; the active Spring profile selects which
+  # beans are loaded. SPRING_KAFKA_BOOTSTRAP_SERVERS points to both brokers
+  # so the Kafka client can fail over automatically if one goes down.
+  #
+  # Trigger the workflow: curl http://localhost:8081/api/workflow/start
+
+  invoice-ingest:
     image: andreihammer/proiect-tae:latest
-    container_name: invoice-producer
+    container_name: invoice-ingest
     ports:
       - "8081:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: invoice-producer
+      SPRING_PROFILES_ACTIVE: invoice-ingest
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
     depends_on:
       kafka1:
-        condition: service_started
+        condition: service_healthy
       kafka2:
-        condition: service_started
+        condition: service_healthy
 
-  invoice-consumer:
+  invoice-to-payment:
     image: andreihammer/proiect-tae:latest
-    container_name: invoice-consumer
+    container_name: invoice-to-payment
     ports:
       - "8082:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: invoice-consumer
+      SPRING_PROFILES_ACTIVE: invoice-to-payment
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
     depends_on:
       kafka1:
-        condition: service_started
+        condition: service_healthy
       kafka2:
-        condition: service_started
+        condition: service_healthy
 
-  payment-consumer:
+  payment-to-notification:
     image: andreihammer/proiect-tae:latest
-    container_name: payment-consumer
+    container_name: payment-to-notification
     ports:
       - "8083:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: payment-consumer
+      SPRING_PROFILES_ACTIVE: payment-to-notification
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
     depends_on:
       kafka1:
-        condition: service_started
+        condition: service_healthy
       kafka2:
-        condition: service_started
+        condition: service_healthy
+
+  notification-dispatch:
+    image: andreihammer/proiect-tae:latest
+    container_name: notification-dispatch
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: notification-dispatch
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:29092,kafka2:29092
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy

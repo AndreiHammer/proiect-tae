@@ -3,7 +3,6 @@ package com.hammer.proiecttae.service;
 import com.hammer.proiecttae.util.KafkaTopicsConstants;
 import com.hammer.proiecttae.model.Invoice;
 import com.hammer.proiecttae.util.MessageUtils;
-import com.hammer.proiecttae.util.XsltTranformer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -18,14 +17,15 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hammer.proiecttae.util.XmlUtils.marshal;
+
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Profile("invoice-producer")
+@Profile("invoice-ingest")
 public class InvoiceProducerService {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final XsltTranformer transformer;
 
     public void sendInvoice(Invoice invoice) {
         log.info("Preparing to send invoice [{}] to topic '{}'",
@@ -33,7 +33,7 @@ public class InvoiceProducerService {
 
         String correlationId = UUID.randomUUID().toString();
 
-        String xmlPayload = transformer.marshal(invoice, Invoice.class);
+        String xmlPayload = marshal(invoice, Invoice.class);
 
         Message<String> message = MessageBuilder
                 .withPayload(xmlPayload)
@@ -48,7 +48,8 @@ public class InvoiceProducerService {
 
         future.whenComplete((result, ex) -> {
            if (ex == null) {
-               log.info("Invoice [{}] sent successfully: topic='{}', partition={}, offset={}",
+               log.info("[{}]Invoice [{}] sent successfully: topic='{}', partition={}, offset={}",
+                       correlationId,
                        invoice.getInvoiceId(),
                        result.getRecordMetadata().topic(),
                        result.getRecordMetadata().partition(),

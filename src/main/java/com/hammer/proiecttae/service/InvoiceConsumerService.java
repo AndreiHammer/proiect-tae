@@ -2,7 +2,7 @@ package com.hammer.proiecttae.service;
 
 import com.hammer.proiecttae.util.KafkaTopicsConstants;
 import com.hammer.proiecttae.util.MessageUtils;
-import com.hammer.proiecttae.util.XsltTranformer;
+import com.hammer.proiecttae.util.XsltTransformer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -23,12 +23,12 @@ import static com.hammer.proiecttae.util.MessageUtils.extractHeader;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Profile("invoice-consumer")
+@Profile("invoice-to-payment")
 public class InvoiceConsumerService {
 
     private static final String INVOICE_TO_PAYMENT_XSL = "/xsl/invoice-to-payment.xsl";
 
-    private final XsltTranformer xsltTranformer;
+    private final XsltTransformer xsltTransformer;
     private final PaymentProducerService paymentProducerService;
 
     @KafkaListener(
@@ -53,14 +53,14 @@ public class InvoiceConsumerService {
 
         try {
             log.info("Applying XSLT transformation '{}'...", INVOICE_TO_PAYMENT_XSL);
-            String paymentXml = xsltTranformer.transform(record.value(), INVOICE_TO_PAYMENT_XSL, Map.of());
+            String paymentXml = xsltTransformer.transform(record.value(), INVOICE_TO_PAYMENT_XSL, Map.of());
 
             String paymentKey = extractPaymentId(paymentXml, record.key());
 
             paymentProducerService.sendPayment(paymentKey, paymentXml, correlationId);
 
-            log.info("=== [INVOICES] Processing complete for key='{}'; paymentKey='{}' ===",
-                    record.key(), paymentKey);
+            log.info("[{}]=== [INVOICES] Processing complete for key='{}'; paymentKey='{}' ===",
+                    correlationId, record.key(), paymentKey);
 
         } catch (Exception e) {
             log.error("=== [INVOICES] ERROR processing message key='{}' from offset={} ===",

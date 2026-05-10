@@ -18,22 +18,22 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Profile("invoice-to-payment")
-public class PaymentProducerService {
+@Profile("payment-to-notification")
+public class NotificationProducerService {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void sendPayment(String paymentKey, String paymentXml, String correlationId) {
-        log.info("Forwarding transformed payment [{}] to topic '{}'",
-                paymentKey, KafkaTopicsConstants.PAYMENTS);
-        log.debug("Payment XML to be sent:\n{}", paymentXml);
+    public void sendNotification(String notificationKey, String notificationXml, String correlationId) {
+        log.info("Forwarding notification [{}] to topic '{}' (correlationId={})",
+                notificationKey, KafkaTopicsConstants.NOTIFICATIONS, correlationId);
+        log.debug("Notification XML to be sent:\n{}", notificationXml);
 
         Message<String> message = MessageBuilder
-                .withPayload(paymentXml)
-                .setHeader(KafkaHeaders.TOPIC, KafkaTopicsConstants.PAYMENTS)
-                .setHeader(KafkaHeaders.KEY, paymentKey)
+                .withPayload(notificationXml)
+                .setHeader(KafkaHeaders.TOPIC, KafkaTopicsConstants.NOTIFICATIONS)
+                .setHeader(KafkaHeaders.KEY, notificationKey)
                 .setHeader(MessageUtils.CORRELATION_ID, correlationId)
-                .setHeader(MessageUtils.MESSAGE_TYPE, "Payment")
+                .setHeader(MessageUtils.MESSAGE_TYPE, "Notification")
                 .setHeader(MessageUtils.SENT_AT, Instant.now().toString())
                 .build();
 
@@ -41,16 +41,17 @@ public class PaymentProducerService {
 
         future.whenComplete((result, ex) -> {
             if (ex == null) {
-                log.info("[{}] Payment [{}] sent successfully → topic='{}', partition={}, offset={}",
-                        correlationId,
-                        paymentKey,
+                log.info("Notification [{}] sent successfully → topic='{}', partition={}, offset={}, correlationId={}",
+                        notificationKey,
                         result.getRecordMetadata().topic(),
                         result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset());
+                        result.getRecordMetadata().offset(),
+                        correlationId);
             } else {
-                log.error("Failed to forward payment [{}] to topic '{}'",
-                        paymentKey, KafkaTopicsConstants.PAYMENTS, ex);
+                log.error("Failed to forward notification [{}] to topic '{}' (correlationId={})",
+                        notificationKey, KafkaTopicsConstants.NOTIFICATIONS, correlationId, ex);
             }
         });
     }
+
 }

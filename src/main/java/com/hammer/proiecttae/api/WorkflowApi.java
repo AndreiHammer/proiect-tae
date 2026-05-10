@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/workflow")
-@Profile("invoice-producer")
+@Profile("invoice-ingest")
 public class WorkflowApi {
 
     private final WorkflowService workflowService;

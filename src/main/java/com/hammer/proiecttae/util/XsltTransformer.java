@@ -3,6 +3,7 @@ package com.hammer.proiecttae.util;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -18,28 +19,9 @@ import java.util.Map;
 
 @Slf4j
 @Component
-public class XsltTranformer {
+public class XsltTransformer {
 
     private final TransformerFactory factory = TransformerFactory.newInstance();
-
-    public <T> String marshal(T object, Class<T> clazz) {
-        try {
-            JAXBContext ctx = JAXBContext.newInstance(clazz);
-            Marshaller marshaller = ctx.createMarshaller();
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-            marshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");
-
-            StringWriter sw = new StringWriter();
-            marshaller.marshal(object, sw);
-
-            String xml = sw.toString();
-            log.debug("Marshalled {} to XML:\n{}", clazz.getSimpleName(), xml);
-            return xml;
-
-        } catch (JAXBException e) {
-            throw new IllegalStateException("Failed to marshal " + clazz.getSimpleName(), e);
-        }
-    }
 
     public String transform(String inputXml, String xsltClasspathResource, Map<String, String> params) {
         log.info("Starting XSLT transformation with stylesheet '{}'", xsltClasspathResource);

@@ -50,16 +50,21 @@ public class KafkaProducerConfig {
 
     @Bean
     public NewTopic invoices() {
-        return TopicBuilder.name(KafkaTopicsConstants.INVOICES)
-                .partitions(2)
-                .replicas(2)
-                .config("min.insync.replicas", "2")
-                .build();
+        return topic(KafkaTopicsConstants.INVOICES);
     }
 
     @Bean
     public NewTopic payments() {
-        return TopicBuilder.name(KafkaTopicsConstants.PAYMENTS)
+        return topic(KafkaTopicsConstants.PAYMENTS);
+    }
+
+    @Bean
+    public NewTopic notifications() {
+        return topic(KafkaTopicsConstants.NOTIFICATIONS);
+    }
+
+    private NewTopic topic(String topicName) {
+        return TopicBuilder.name(topicName)
                 .partitions(2)
                 .replicas(2)
                 .config("min.insync.replicas", "2")
